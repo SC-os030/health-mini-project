@@ -1,0 +1,16 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "lovely-herring-d8g0r2mntd6f4dc3f",
+  "app": {
+    "serviceName": "health-motion",
+    "root": ".",
+    "framework": "vite",
+    "installCommand": "npm ci",
+    "buildCommand": "npm run build",
+    "outputDir": "dist",
+    "deployPath": "/health-motion",
+    "ignore": [
+      "probe/**"
+    ]
+  }
+}

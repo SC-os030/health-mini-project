@@ -1,0 +1,19 @@
+{
+  "name": "health-miniapp-web",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 4173",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 4173",
+    "test": "node --test tests/store.test.js",
+    "check": "npm test && npm run build"
+  },
+  "devDependencies": {
+    "vite": "8.3.5"
+  },
+  "dependencies": {
+    "@cloudbase/js-sdk": "^3.11.0"
+  }
+}

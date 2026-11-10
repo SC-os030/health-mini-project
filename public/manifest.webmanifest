@@ -1,0 +1,19 @@
+{
+  "name": "动一点 · 健康行动中心",
+  "short_name": "动一点",
+  "description": "走大步、喝大水、练肌肉、睡大觉，与伙伴一起完成健康挑战。",
+  "start_url": "./#today",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f4ec",
+  "theme_color": "#f5f5f7",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
