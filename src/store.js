@@ -424,29 +424,37 @@ export function progressRatio(project, value, goal) {
 export function walkingScore(value, goal = 8000) {
   const steps = Math.max(0, Number(value || 0));
   const target = Math.max(1, Number(goal || 8000));
-  const ratio = steps / target;
-  if (ratio >= 1) return 100;
-  if (ratio >= 0.875) return 90;
-  if (ratio >= 0.75) return 80;
-  if (ratio >= 0.625) return 70;
-  if (ratio >= 0.5) return 60;
-  if (ratio >= 0.375) return 50;
-  if (ratio >= 0.25) return 40;
-  if (steps > 0) return 20;
-  return 0;
+  return Math.round(clamp(steps / target, 0, 1) * 100);
 }
 
-export function weightManagementScore(value, baseline, target, previousValue = null) {
+export function weightManagementBreakdown(value, baseline, target, previousValue = null) {
   const current = Number(value || 0);
   const start = Number(baseline || 0);
   const goal = Number(target || 0);
-  if (current <= 0) return 0;
-  if (start <= 0 || goal <= 0) return 0;
+  const empty = { total: 0, progress: 0, stability: 0, record: 0 };
+  if (current <= 0 || start <= 0 || goal <= 0) return empty;
+
   const previous = Number(previousValue || 0);
-  if (previous > 0 && Math.abs(current - previous) > 1) return 0;
   const baselineDistance = Math.abs(start - goal);
   const currentDistance = Math.abs(current - goal);
-  return currentDistance < baselineDistance - 0.05 ? 100 : 0;
+  const progress = baselineDistance <= 0.05
+    ? clamp(1 - Math.abs(current - goal) / 2, 0, 1)
+    : clamp((baselineDistance - currentDistance) / baselineDistance, 0, 1);
+  const dailyChange = previous > 0 ? Math.abs(current - previous) : 0;
+  const stability = previous > 0
+    ? clamp(1 - Math.max(0, dailyChange - 1) / 1, 0, 1)
+    : 1;
+  const record = 1;
+  return {
+    progress: Math.round(progress * 60),
+    stability: Math.round(stability * 25),
+    record: Math.round(record * 15),
+    total: Math.round(progress * 60 + stability * 25 + record * 15),
+  };
+}
+
+export function weightManagementScore(value, baseline, target, previousValue = null) {
+  return weightManagementBreakdown(value, baseline, target, previousValue).total;
 }
 
 function earliestWeightDate(records) {
@@ -1246,17 +1254,15 @@ export function homeOverview(state) {
   const cards = selectedProjects(state).map((project) => {
     const goal = Number(state.goals[project.key] || project.goal);
     const value = Number(record[project.key] || 0);
+    const weightBreakdown = project.key === 'weight'
+      && weightBaselineDate
+      && today > weightBaselineDate
+      ? weightManagementBreakdown(value, weightBaseline, goal, previousWeight)
+      : null;
     const score = project.key === 'steps'
       ? walkingScore(value, goal)
       : project.key === 'weight'
-        ? (weightBaselineDate && today > weightBaselineDate
-          ? weightManagementScore(
-          value,
-          weightBaseline,
-          goal,
-          previousWeight,
-          )
-          : 0)
+        ? weightBreakdown?.total || 0
         : Math.round(progressRatio(project, value, goal) * 100);
     const ratio = score / 100;
     const remaining = project.direction === 'decrease'
@@ -1269,13 +1275,15 @@ export function homeOverview(state) {
       percent: score,
       valueText: formatNumber(value, project.decimals),
       goalText: formatNumber(goal, project.decimals),
-      done: score >= 100,
+      done: project.key === 'weight'
+        ? Boolean(weightBreakdown?.progress)
+        : score >= 100,
       remainingText: project.key === 'weight'
         ? (value <= 0
           ? '输入今天的体重'
           : (!weightBaselineDate || today <= weightBaselineDate)
             ? '基线已记录，明天开始评分'
-            : (score >= 100 ? '比基线更接近目标' : '继续向目标靠近'))
+            : (weightBreakdown?.progress > 0 ? '比基线更接近目标' : '继续向目标靠近'))
         : ratio >= 1
           ? '今天已完成'
           : `还差 ${formatNumber(remaining, project.decimals)} ${project.unit}`,
@@ -1434,18 +1442,20 @@ export function leaderboardOverview(state, range = 7) {
       const project = PROJECT_MAP[key];
       const value = Number(record[key] || 0);
       const goal = Number(goals[key] ?? project.goal);
+      const weightBreakdown = key === 'weight'
+        && weightBaselineDateFor(memberId)
+        && dateKey > weightBaselineDateFor(memberId)
+        ? weightManagementBreakdown(
+          value,
+          goals.weightBaseline || weightBaselineFor(memberId),
+          goal,
+          Number(memberRecordFor(memberId, shiftDateKey(dateKey, -1))?.weight || 0),
+        )
+        : null;
       const score = key === 'steps'
         ? walkingScore(value, goal)
         : key === 'weight'
-          ? (weightBaselineDateFor(memberId)
-            && dateKey > weightBaselineDateFor(memberId)
-            ? weightManagementScore(
-              value,
-              goals.weightBaseline || weightBaselineFor(memberId),
-              goal,
-              Number(memberRecordFor(memberId, shiftDateKey(dateKey, -1))?.weight || 0),
-            )
-            : 0)
+          ? weightBreakdown?.total || 0
           : Math.round(progressRatio(project, value, goal) * 100);
       return {
         key,
@@ -1454,6 +1464,7 @@ export function leaderboardOverview(state, range = 7) {
         goal,
         percent: score,
         score,
+        breakdown: weightBreakdown,
         done: score >= 100,
       };
     });
@@ -1527,6 +1538,7 @@ export function leaderboardOverview(state, range = 7) {
       const projectDays = daily.map((day) => (
         day.projects.find((item) => item.key === project.key)
       ));
+      const weightDays = projectDays.map((item) => item?.breakdown).filter(Boolean);
       return [
         project.key,
         {
@@ -1535,6 +1547,11 @@ export function leaderboardOverview(state, range = 7) {
           ),
           completedDays: projectDays.filter((item) => Number(item?.score || 0) >= 100).length,
           totalValue: projectDays.reduce((sum, item) => sum + Number(item?.value || 0), 0),
+          components: project.key === 'weight' ? {
+            progress: Math.round(weightDays.reduce((sum, item) => sum + item.progress, 0) / daily.length),
+            stability: Math.round(weightDays.reduce((sum, item) => sum + item.stability, 0) / daily.length),
+            record: Math.round(weightDays.reduce((sum, item) => sum + item.record, 0) / daily.length),
+          } : null,
         },
       ];
     }));
@@ -1544,6 +1561,10 @@ export function leaderboardOverview(state, range = 7) {
       rating: averageRate,
       completedTotal,
       projectScores,
+      cumulativeSteps: {
+        total: Number(projectScores.steps?.totalValue || 0),
+        perMember: Number(projectScores.steps?.totalValue || 0),
+      },
       today: daily.find((day) => day.dateKey === today) || daily[daily.length - 1],
     };
   }).sort((a, b) => b.rating - a.rating || b.completedTotal - a.completedTotal);
@@ -1565,12 +1586,17 @@ export function leaderboardOverview(state, range = 7) {
           sum + Number(item.projects.find((value) => value.key === project.key)?.score || 0)
         ), 0) / memberCount),
       ]));
+      const stepTotal = (team.members || []).reduce((sum, member) => (
+        sum + Number(memberRecordFor(member.id, dateKey)?.steps || 0)
+      ), 0);
       return {
         dateKey,
         rate: Math.round(memberStats.reduce((sum, item) => sum + item.rate, 0) / memberCount),
         completed: memberStats.reduce((sum, item) => sum + item.completed, 0),
         activeMembers: memberStats.filter((item) => item.hasRecord).length,
         projectRates,
+        stepTotal,
+        stepPerMember: Math.round(stepTotal / memberCount),
       };
     });
     const rating = Math.round(daily.reduce((sum, day) => sum + day.rate, 0) / daily.length);
@@ -1662,6 +1688,7 @@ export function leaderboardOverview(state, range = 7) {
       daily: challengeDaily,
       rating: challengeRating,
     } : null;
+    const cumulativeStepTotal = daily.reduce((sum, day) => sum + Number(day.stepTotal || 0), 0);
     return {
       id: team.id,
       name: team.name,
@@ -1671,6 +1698,11 @@ export function leaderboardOverview(state, range = 7) {
       daily,
       rating,
       projectScores,
+      cumulativeSteps: {
+        total: cumulativeStepTotal,
+        perMember: Math.round(cumulativeStepTotal / Math.max(1, team.members?.length || 0)),
+        todayPerMember: Number(daily[daily.length - 1]?.stepPerMember || 0),
+      },
       challenge: challengeScore,
       challengeScores: challengeScore ? { [challengeActivity.key]: challengeScore } : {},
       today: daily.find((day) => day.dateKey === today) || daily[daily.length - 1],
@@ -1739,6 +1771,9 @@ export function leaderboardOverview(state, range = 7) {
         return {
           dateKey,
           percent,
+          stepTotal: memberValues
+            .filter(({ profile }) => Boolean(profile))
+            .reduce((sum, item) => sum + Number(memberRecordFor(item.profile.user_id, dateKey)?.steps || 0), 0),
         };
       });
       const rating = Math.round(
@@ -1753,6 +1788,12 @@ export function leaderboardOverview(state, range = 7) {
         rating,
       }];
     }));
+    const cumulativeStepTotal = dates.reduce((sum, dateKey) => (
+      sum + members.reduce((memberSum, profile) => (
+        memberSum + Number(memberRecordFor(profile.user_id, dateKey)?.steps || 0)
+      ), 0)
+    ), 0);
+    const memberCount = members.length;
     const daily = dates.map((dateKey) => {
       const projectRates = Object.fromEntries(defaultProjects.map((project) => [
         project.key,
@@ -1767,6 +1808,10 @@ export function leaderboardOverview(state, range = 7) {
         rate: Math.round(weightedTotal),
         completed: Object.values(projectRates).filter((value) => value >= 100).length,
         projectRates,
+        stepPerMember: Math.round(
+          Number(challengeScores.steps.daily.find((day) => day.dateKey === dateKey)?.stepTotal || 0)
+          / Math.max(1, memberCount),
+        ),
       };
     });
     const rating = Math.round(
@@ -1780,6 +1825,15 @@ export function leaderboardOverview(state, range = 7) {
       memberCount: members.length,
       daily,
       rating,
+      cumulativeSteps: {
+        total: cumulativeStepTotal,
+        perMember: Math.round(cumulativeStepTotal / Math.max(1, memberCount)),
+        todayPerMember: Math.round(
+          members.reduce((sum, profile) => (
+            sum + Number(memberRecordFor(profile.user_id, today)?.steps || 0)
+          ), 0) / Math.max(1, memberCount),
+        ),
+      },
       projectScores: Object.fromEntries(allProjects.map((project) => {
         const score = challengeScores[project.key];
         return [project.key, {

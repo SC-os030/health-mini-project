@@ -3247,6 +3247,41 @@ select {
   text-align: center;
 }
 
+.rank-trophy {
+  display: inline-grid;
+  place-items: center;
+}
+
+.rank-trophy .icon {
+  width: 21px;
+  height: 21px;
+  fill: currentColor;
+  fill-opacity: 0.16;
+  stroke-width: 1.7;
+}
+
+.rank-trophy.rank-1 {
+  color: #d69b13;
+  filter: drop-shadow(0 3px 7px rgba(214, 155, 19, 0.2));
+}
+
+.rank-trophy.rank-2 {
+  color: #8d99a6;
+  filter: drop-shadow(0 3px 7px rgba(141, 153, 166, 0.18));
+}
+
+.rank-trophy.rank-3 {
+  color: #b97448;
+  filter: drop-shadow(0 3px 7px rgba(185, 116, 72, 0.18));
+}
+
+.rank-medal.rank-trophy .icon {
+  width: 58px;
+  height: 58px;
+  fill-opacity: 0.13;
+  stroke-width: 1.35;
+}
+
 .ranking-person {
   display: flex;
   min-width: 0;
@@ -3565,6 +3600,11 @@ select {
 
   .rank-medal {
     font-size: 31px;
+  }
+
+  .rank-medal.rank-trophy .icon {
+    width: 42px;
+    height: 42px;
   }
 
   .leaderboard-grid {

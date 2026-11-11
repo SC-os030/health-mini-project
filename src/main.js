@@ -132,6 +132,16 @@ function icon(name, className = '') {
   return `<svg class="icon ${className}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.arrow}</svg>`;
 }
 
+function rankBadge(rank, variant = 'row') {
+  const placement = Number(rank);
+  const className = variant === 'hero' ? 'rank-medal' : 'ranking-number';
+  const visibleRank = Number.isFinite(placement) && placement > 0 ? placement : '—';
+  if (![1, 2, 3].includes(placement)) {
+    return `<span class="${className}">${visibleRank}</span>`;
+  }
+  return `<span class="${className} rank-trophy rank-${placement}" role="img" aria-label="第 ${placement} 名">${icon('trophy')}</span>`;
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -2088,6 +2098,7 @@ function renderLeaderboard() {
   ));
   const personalProjectChoices = [
     { key: 'overall', name: '总分', mark: '总' },
+    { key: 'steps_cumulative', name: '累计步数', mark: '步' },
     ...defaultProjects.map((project) => ({
       key: project.key,
       name: project.name,
@@ -2123,6 +2134,7 @@ function renderLeaderboard() {
   );
   const organizationTeamProjectChoices = [
     { key: 'team_overall', name: '总分', mark: '队' },
+    { key: 'team_steps_cumulative', name: '累计步数', mark: '步' },
     ...defaultProjects.map((project) => ({
       key: `team_${project.key}`,
       name: project.name,
@@ -2130,10 +2142,21 @@ function renderLeaderboard() {
       activityKey: project.key,
     })),
   ];
-  const customTeamProjectChoices = [
-    { key: 'team_overall', name: '总分', mark: '队' },
-    ...extraTeamChoices,
-  ];
+  const customTeamProjectChoices = Array.from(
+    new Map(
+      [
+        { key: 'team_overall', name: '总分', mark: '队' },
+        { key: 'team_steps_cumulative', name: '累计步数', mark: '步' },
+        ...defaultProjects.map((project) => ({
+          key: `team_${project.key}`,
+          name: project.name,
+          mark: project.mark,
+          activityKey: project.key,
+        })),
+        ...extraTeamChoices,
+      ].map((choice) => [choice.key, choice]),
+    ).values(),
+  );
   const teamProjectChoices = teamLeaderboardScope === 'custom'
     ? customTeamProjectChoices
     : organizationTeamProjectChoices;
@@ -2143,17 +2166,36 @@ function renderLeaderboard() {
     : HEALTH_PROJECTS.find((project) => project.key === leaderboardProject);
   const selectedTeamProject = teamProjectChoices.find((choice) => choice.key === leaderboardProject)
     || teamProjectChoices[0];
+  const personalCumulativeRanking = individualMode && leaderboardProject === 'steps_cumulative';
+  const teamCumulativeRanking = !individualMode
+    && selectedTeamProject.key === 'team_steps_cumulative';
+  const cumulativeRanking = personalCumulativeRanking || teamCumulativeRanking;
+  const teamHealthProjectRanking = !individualMode
+    && ['steps', 'weight'].includes(selectedTeamProject.activityKey);
+  const weightRanking = individualMode
+    ? selectedHealthProject?.key === 'weight'
+    : selectedTeamProject.activityKey === 'weight';
   const activeProjectKey = individualMode ? leaderboardProject : selectedTeamProject.key;
   const teamChallengeScoreFor = (team, activityKey) => (
     team?.challengeScores?.[activityKey]
     || (team?.challenge?.key === activityKey ? team.challenge : null)
   );
   const scoreFor = (row) => {
+    if (!row) return 0;
     if (!individualMode) {
       if (selectedTeamProject.key === 'team_overall') {
         return Number(row.rating || 0);
       }
+      if (teamCumulativeRanking) {
+        return Number(row.cumulativeSteps?.perMember || 0);
+      }
+      if (teamHealthProjectRanking) {
+        return Number(row.projectScores?.[selectedTeamProject.activityKey]?.averagePercent || 0);
+      }
       return Number(teamChallengeScoreFor(row, selectedTeamProject.activityKey)?.rating || 0);
+    }
+    if (personalCumulativeRanking) {
+      return Number(row.cumulativeSteps?.total || 0);
     }
     if (!selectedHealthProject) return Number(row.rating || 0);
     return Number(row.projectScores?.[selectedHealthProject.key]?.averagePercent || 0);
@@ -2163,9 +2205,18 @@ function renderLeaderboard() {
       if (selectedTeamProject.key === 'team_overall') {
         return Number(day?.rate || 0);
       }
+      if (teamCumulativeRanking) {
+        return Number(day?.stepPerMember || 0);
+      }
+      if (teamHealthProjectRanking) {
+        return Number(day?.projectRates?.[selectedTeamProject.activityKey] || 0);
+      }
       const challengeDay = teamChallengeScoreFor(row, selectedTeamProject.activityKey)
         ?.daily?.find((item) => item.dateKey === day?.dateKey);
       return Number(challengeDay?.percent || 0);
+    }
+    if (personalCumulativeRanking) {
+      return Number(day?.projects?.find((item) => item.key === 'steps')?.value || 0);
     }
     if (!selectedHealthProject) return Number(day?.rate || 0);
     return Number(day?.projects?.find((item) => item.key === selectedHealthProject.key)?.percent || 0);
@@ -2183,6 +2234,8 @@ function renderLeaderboard() {
   ));
   const teams = scopedTeams.filter((team) => (
     selectedTeamProject.key === 'team_overall'
+    || teamCumulativeRanking
+    || teamHealthProjectRanking
     || Boolean(teamChallengeScoreFor(team, selectedTeamProject.activityKey))
   )).slice().sort((a, b) => (
     scoreFor(b) - scoreFor(a)
@@ -2194,24 +2247,55 @@ function renderLeaderboard() {
   const myRow = individualMode ? people.find((person) => person.isMe) : teams.find((team) => team.isMine);
   const myDaily = individualMode
     ? (myRow?.daily || [])
-    : (selectedTeamProject.key === 'team_overall'
+    : (selectedTeamProject.key === 'team_overall' || teamCumulativeRanking || teamHealthProjectRanking
       ? (myRow?.daily || []).map((day) => ({ ...day, percent: day.rate }))
       : (teamChallengeScoreFor(myRow, selectedTeamProject.activityKey)?.daily || []));
   const scoreLabel = individualMode
-    ? (selectedHealthProject ? `${selectedHealthProject.name}得分` : '个人总分')
+    ? (personalCumulativeRanking
+      ? '累计步数 · 步'
+      : selectedHealthProject ? `${selectedHealthProject.name}得分` : '个人总分')
     : (selectedTeamProject.key === 'team_overall'
       ? '小队总分'
-      : `${selectedTeamProject.name}得分`);
+      : teamCumulativeRanking
+        ? '人均累计步数 · 步'
+        : `${selectedTeamProject.name}得分`);
   const activeProjectName = individualMode
-    ? (selectedHealthProject?.name || '总分')
+    ? (personalCumulativeRanking ? '累计步数' : selectedHealthProject?.name || '总分')
     : selectedTeamProject.name;
+  const rangeLabel = leaderboardRange === 1 ? '今日' : '近 7 天';
+  const rankingDescription = cumulativeRanking
+    ? `${rangeLabel}累计步数排名${individualMode ? '，按个人累计步数排序。' : '，按小队成员人均累计步数排序。'}`
+    : weightRanking
+      ? '体重管理分由目标进度 60%、变化平稳度 25%、记录完成度 15% 组成；榜单只展示得分，不公开实际体重。'
+      : individualMode
+        ? (selectedHealthProject
+          ? `${selectedHealthProject.name}在${rangeLabel}的独立完成率排名。`
+          : `${rangeLabel}个人总分，按走路得分 70% 和体重管理得分 30% 计算。`)
+        : (selectedTeamProject.key === 'team_overall'
+          ? `${rangeLabel}小队总分，按成员平均走路得分 70% 和平均体重管理得分 30% 计算。`
+          : `${selectedTeamProject.name}在${rangeLabel}的独立完成率排名。`);
+  const rankingRule = cumulativeRanking
+    ? (individualMode
+      ? '累计步数为所选周期内每天步数之和；步数越高排名越靠前。'
+      : '小队累计步数按成员人均累计步数计算，不按成员人数累加团队总量，避免人数影响公平性。')
+    : weightRanking
+      ? '体重管理分最高 100 分，由目标进度、日变化平稳度和记录完成度组成；实际体重不进入公开榜单。'
+      : (individualMode
+        ? (selectedHealthProject
+          ? `${selectedHealthProject.name}按个人目标完成比例连续计算，最高 100 分。`
+          : '个人总分为走路得分 70% 加体重管理得分 30%；走路按完成比例连续计分，体重按进度、平稳度和记录度综合计分。')
+        : (selectedTeamProject.key === 'team_overall'
+          ? '小队总分为成员平均走路得分 70% 加成员平均体重管理得分 30%。'
+          : `${selectedTeamProject.name}项目按成员或团队平均值计算，最高 100 分。`));
+  const trendValues = myDaily.map((day) => todayScoreFor(myRow, day));
+  const trendScaleMax = Math.max(1, ...trendValues);
   return `
     <section class="page leaderboard-page">
       <header class="page-heading">
         <div>
           <span class="kicker">DAILY RANKING</span>
           <h1>排行榜</h1>
-          <p>默认展示走路和体重，个人与小队的排名总分按走路 70%、体重 30% 计算。</p>
+          <p>总分按走路 70%、体重管理 30% 计算，也可以展开查看累计步数、走路和体重独立榜。</p>
         </div>
         <span class="status-pill">${icon('check')} 排名按最新记录更新</span>
       </header>
@@ -2260,21 +2344,14 @@ function renderLeaderboard() {
         <div class="leaderboard-hero-copy">
           <span class="kicker">${individualMode ? 'PERSONAL SCORE' : 'CREW SCORE'}</span>
           <h2>${individualMode ? escapeHtml(myRow?.name || state.profile.nickname) : escapeHtml(myRow?.name || '尚未创建小队')}</h2>
-          <p>${individualMode
-            ? (selectedHealthProject
-              ? `${selectedHealthProject.name}在${leaderboardRange === 1 ? '今日' : '近 7 天'}的独立完成率排名。`
-              : `${leaderboardRange === 1 ? '今日' : '近 7 天'}个人总分，按走路得分 70% 和体重得分 30% 计算。`)
-            : (selectedTeamProject.key === 'team_overall'
-              ? `${leaderboardRange === 1 ? '今日' : '近 7 天'}小队总分，按团队走路得分 70% 和体重得分 30% 计算。`
-              : `${selectedTeamProject.name}挑战在${leaderboardRange === 1 ? '今日' : '近 7 天'}的独立完成率排名。`)}
-          </p>
+          <p>${rankingDescription}</p>
           <div class="leaderboard-big-score">
-            <strong>${myRow ? scoreFor(myRow) : 0}</strong>
+            <strong>${formatNumber(scoreFor(myRow))}</strong>
           </div>
           <small class="leaderboard-score-label">${scoreLabel}</small>
         </div>
         <div class="leaderboard-medal" aria-hidden="true">
-          <span class="rank-medal">${myRow?.liveRank || '—'}</span>
+          ${rankBadge(myRow?.liveRank, 'hero')}
           <small>${individualMode ? '个人名次' : '小队名次'}</small>
         </div>
       </section>
@@ -2291,17 +2368,22 @@ function renderLeaderboard() {
                 const projectToday = selectedHealthProject
                   ? person.today.projects.find((item) => item.key === selectedHealthProject.key)
                   : null;
+                const stepToday = person.today.projects.find((item) => item.key === 'steps');
                 return `
                   <div class="ranking-row ${person.isMe ? 'is-me' : ''}">
-                    <span class="ranking-number">${person.liveRank}</span>
+                    ${rankBadge(person.liveRank)}
                     <span class="mini-avatar">${escapeHtml(person.avatarText)}</span>
                     <span class="ranking-person">
                       <b>${escapeHtml(person.name)}${person.isMe ? ' · 我' : ''}</b>
-                      <small>${selectedHealthProject
-                        ? `今日 ${projectToday?.percent || 0} · 目标 ${formatNumber(projectToday?.goal || selectedHealthProject.goal, selectedHealthProject.decimals)} ${selectedHealthProject.unit}`
-                        : `今日 ${person.today.completed} / ${state.enabledProjects.length} 项达标`}</small>
+                      <small>${personalCumulativeRanking
+                        ? `今日 ${formatNumber(stepToday?.value || 0)} 步 · ${rangeLabel}累计`
+                        : selectedHealthProject?.key === 'weight'
+                          ? `今日管理分 ${projectToday?.percent || 0} · 实际体重仅本人可见`
+                          : selectedHealthProject
+                            ? `今日 ${projectToday?.percent || 0} · 目标 ${formatNumber(projectToday?.goal || selectedHealthProject.goal, selectedHealthProject.decimals)} ${selectedHealthProject.unit}`
+                            : `今日 ${person.today.completed} / ${state.enabledProjects.length} 项达标`}</small>
                     </span>
-                    <span class="ranking-score"><b>${scoreFor(person)}</b><small>${scoreLabel}</small></span>
+                    <span class="ranking-score"><b>${formatNumber(scoreFor(person))}</b><small>${scoreLabel}</small></span>
                   </div>
                 `;
               }).join('')}
@@ -2311,13 +2393,17 @@ function renderLeaderboard() {
               <div class="ranking-list">
                 ${teams.map((team) => `
                   <div class="ranking-row team-ranking-row ${team.isMine ? 'is-me' : ''}">
-                    <span class="ranking-number">${team.liveRank}</span>
+                    ${rankBadge(team.liveRank)}
                     <span class="mini-avatar">${escapeHtml(team.avatarText)}</span>
                     <span class="ranking-person">
                       <b>${escapeHtml(team.name)}${team.isMine && !team.isDefaultGroup ? ' · 我的小队' : ''}</b>
-                      <small>${team.memberCount} 位成员 · 今日 ${todayScoreFor(team, team.today)}</small>
+                      <small>${team.memberCount} 位成员 · ${teamCumulativeRanking
+                        ? `今日人均 ${formatNumber(todayScoreFor(team, team.today))} 步`
+                        : weightRanking
+                          ? `今日管理分 ${todayScoreFor(team, team.today)}`
+                          : `今日 ${todayScoreFor(team, team.today)} 分`}</small>
                     </span>
-                    <span class="ranking-score"><b>${scoreFor(team)}</b><small>${scoreLabel}</small></span>
+                    <span class="ranking-score"><b>${formatNumber(scoreFor(team))}</b><small>${scoreLabel}</small></span>
                   </div>
                 `).join('')}
               </div>
@@ -2338,26 +2424,21 @@ function renderLeaderboard() {
           <div class="daily-rank-list">
             ${myDaily.map((day) => {
               const value = todayScoreFor(myRow, day);
+              const width = cumulativeRanking
+                ? Math.round((value / trendScaleMax) * 100)
+                : Math.min(100, Math.max(0, value));
               return `
                 <div class="daily-rank-row">
                   <span class="daily-rank-date"><b>${dateLabel(day.dateKey, false)}</b><small>周${weekdayShort(day.dateKey)}</small></span>
-                  <span class="daily-rank-track"><i style="width:${value}%"></i></span>
-                  <strong>${value}</strong>
+                  <span class="daily-rank-track"><i style="width:${width}%"></i></span>
+                  <strong>${formatNumber(value)}</strong>
                 </div>
               `;
             }).join('')}
           </div>
           <div class="ranking-rule">
             <span class="kicker">RANKING RULE</span>
-            <p>${individualMode
-              ? (selectedHealthProject
-                ? `${selectedHealthProject.name}按个人目标进度计算，最高 100%。`
-                : '个人总分为走路得分 70% 加体重得分 30%。走路按个人目标分档计分，体重按目标进度和稳定性计分。')
-              : (selectedTeamProject.key === 'team_overall'
-                ? (teamLeaderboardScope === 'custom'
-                  ? '自建战队总分为成员平均走路得分 70% 加成员平均体重得分 30%。'
-                  : '默认小组总分为组内平均走路得分 70% 加平均体重得分 30%。')
-                : `${selectedTeamProject.name}项目按成员或团队平均值计算，最高 100 分。`)}</p>
+            <p>${rankingRule}</p>
           </div>
         </section>
       </div>

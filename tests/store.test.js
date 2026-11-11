@@ -32,6 +32,7 @@ import {
   updateHealthRecord,
   updateAuthProfile,
   walkingScore,
+  weightManagementBreakdown,
   weightManagementScore,
 } from '../src/store.js';
 
@@ -213,14 +214,19 @@ test('个人榜和小队榜按走路70%和体重30%计算总分', () => {
   assert.equal(board.myTeam.projectScores.steps.averagePercent, 100);
 });
 
-test('走路采用分档得分，体重按目标进度与稳定性计分', () => {
+test('走路采用连续比例得分，体重按进度、平稳度和记录度计分', () => {
   assert.equal(walkingScore(8000, 8000), 100);
-  assert.equal(walkingScore(7000, 8000), 90);
-  assert.equal(walkingScore(4000, 8000), 60);
+  assert.equal(walkingScore(7000, 8000), 88);
+  assert.equal(walkingScore(4000, 8000), 50);
   assert.equal(walkingScore(0, 8000), 0);
   assert.equal(weightManagementScore(65, 80, 65, 66), 100);
-  assert.equal(weightManagementScore(79, 80, 65, 79), 100);
-  assert.equal(weightManagementScore(81, 80, 65, 81), 0);
+  assert.deepEqual(weightManagementBreakdown(79, 80, 65, 79), {
+    progress: 4,
+    stability: 25,
+    record: 15,
+    total: 44,
+  });
+  assert.equal(weightManagementScore(81, 80, 65, 81), 40);
 
   let state = loadState();
   let result = updateHealthRecord(state, 'weight', 80);
@@ -231,8 +237,37 @@ test('走路采用分档得分，体重按目标进度与稳定性计分', () =>
   state.goals.weightBaselineDate = shiftDateKey(toDateKey(), -1);
   state.records[toDateKey()].weight = 79;
   const improvedCard = homeOverview(state).cards.find((card) => card.key === 'weight');
-  assert.equal(improvedCard.percent, 100);
+  assert.equal(improvedCard.percent, 44);
   assert.equal(improvedCard.done, true);
+});
+
+test('累计步数榜使用区间总步数，小队按成员人均计算', () => {
+  let state = loadState();
+  state.records = {};
+  const today = toDateKey();
+  const yesterday = shiftDateKey(today, -1);
+  state.records[yesterday] = {
+    ...getDayRecord(state, yesterday),
+    steps: 4000,
+  };
+  const result = updateHealthRecord(state, 'steps', 8000);
+  assert.equal(result.ok, true);
+  state = result.state;
+
+  let board = leaderboardOverview(state, 7);
+  const me = board.people.find((person) => person.isMe);
+  assert.equal(me.cumulativeSteps.total, 12000);
+
+  const created = createTeam(state, {
+    name: '累计步数测试队',
+    activity: 'badminton',
+    days: 7,
+  });
+  assert.equal(created.ok, true);
+  board = leaderboardOverview(created.state, 7);
+  const customTeam = board.teams.find((team) => !team.isDefaultGroup);
+  assert.equal(customTeam.cumulativeSteps.total, 12000);
+  assert.equal(customTeam.cumulativeSteps.perMember, 12000);
 });
 
 test('小队榜默认展示六个公司小组', () => {
@@ -295,7 +330,7 @@ test('默认小组排行榜按注册时选择的小组汇总所有成员', () =>
   const teamGroup = board.teams.find((team) => team.code === 'group_center');
   const claimsGroup = board.teams.find((team) => team.code === 'claims_operations');
   assert.equal(personalGroup.memberCount, 2);
-  assert.equal(personalGroup.rating, 42);
+  assert.equal(personalGroup.rating, 35);
   assert.equal(teamGroup.memberCount, 1);
   assert.equal(teamGroup.rating, 70);
   assert.equal(claimsGroup.memberCount, 0);
