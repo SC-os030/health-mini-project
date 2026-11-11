@@ -4,26 +4,34 @@
  */
 
 :root {
-  --bg: #f3f6f8;
+  --bg: #f4f8ff;
   --surface: #ffffff;
-  --surface-soft: #f5f5f7;
-  --ink: #101318;
-  --ink-soft: #424245;
-  --muted: #86868b;
-  --line: rgba(0, 0, 0, 0.065);
-  --line-strong: rgba(0, 0, 0, 0.12);
-  --lime: #1677ff;
-  --lime-soft: #e8f2ff;
-  --blue: #e4f8ff;
-  --blue-deep: #00b8d9;
-  --sand: #fff0e8;
-  --sand-deep: #ff6b35;
-  --violet: #e9fbf4;
-  --violet-deep: #12b981;
-  --red: #d70015;
-  --red-soft: #fff0f1;
-  --shadow: 0 6px 22px rgba(0, 0, 0, 0.035);
-  --shadow-strong: 0 20px 60px rgba(0, 0, 0, 0.11);
+  --surface-soft: #eef5ff;
+  --ink: #0b1728;
+  --ink-soft: #34445c;
+  --muted: #6e8098;
+  --line: rgba(6, 73, 145, 0.09);
+  --line-strong: rgba(6, 73, 145, 0.16);
+  --sport-blue: #087eff;
+  --sport-blue-deep: #0564e8;
+  --sport-cyan: #00bfe8;
+  --sport-cyan-deep: #007fb0;
+  --sport-mint: #09b77d;
+  --sport-lime: #b9f44d;
+  --sport-orange: #ff6b2c;
+  --sport-peach: #ff9b64;
+  --lime: #087eff;
+  --lime-soft: #e2f1ff;
+  --blue: #dcf8ff;
+  --blue-deep: #00aeca;
+  --sand: #fff0e7;
+  --sand-deep: #ff6b2c;
+  --violet: #e6fff3;
+  --violet-deep: #09b77d;
+  --red: #e33b4d;
+  --red-soft: #fff0f2;
+  --shadow: 0 12px 34px rgba(7, 105, 210, 0.08);
+  --shadow-strong: 0 24px 64px rgba(4, 74, 153, 0.16);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --duration-fast: 140ms;
@@ -48,8 +56,9 @@ body {
   min-height: 100dvh;
   margin: 0;
   background:
-    radial-gradient(ellipse 68% 36% at 76% -8%, rgba(22, 119, 255, 0.13), transparent 72%),
-    radial-gradient(ellipse 42% 28% at 10% 22%, rgba(25, 195, 125, 0.08), transparent 78%),
+    radial-gradient(ellipse 70% 44% at 84% -10%, rgba(8, 126, 255, 0.22), transparent 70%),
+    radial-gradient(ellipse 46% 32% at 8% 18%, rgba(185, 244, 77, 0.17), transparent 76%),
+    radial-gradient(ellipse 52% 34% at 92% 82%, rgba(255, 107, 44, 0.11), transparent 76%),
     var(--bg);
   color: var(--ink);
   font-size: 15px;
@@ -536,7 +545,7 @@ select {
 }
 
 .tone-violet .habit-percent {
-  color: #7d63c8;
+  color: #0bbf7a;
 }
 
 .habit-copy {
@@ -592,7 +601,7 @@ select {
 }
 
 .tone-violet .progress-track span {
-  background: #7d63c8;
+  background: linear-gradient(90deg, #09b77d, #5be0a9);
 }
 
 .tone-teal .progress-track span {
@@ -1805,9 +1814,10 @@ select {
   min-height: 100dvh;
   padding: 44px clamp(38px, 6vw, 88px);
   background:
-    radial-gradient(circle at 18% 12%, rgba(41, 151, 255, 0.12), transparent 28%),
-    radial-gradient(circle at 82% 78%, rgba(125, 99, 200, 0.09), transparent 30%),
-    linear-gradient(150deg, #fff 10%, #f7f7f9 90%);
+    radial-gradient(circle at 18% 12%, rgba(8, 126, 255, 0.2), transparent 30%),
+    radial-gradient(circle at 82% 78%, rgba(185, 244, 77, 0.18), transparent 32%),
+    radial-gradient(circle at 90% 16%, rgba(255, 107, 44, 0.1), transparent 26%),
+    linear-gradient(150deg, #ffffff 8%, #eff8ff 54%, #fbfff3 100%);
   color: #1d1d1f;
 }
 
@@ -1818,7 +1828,7 @@ select {
 }
 
 .auth-copy h1 em {
-  background: linear-gradient(90deg, #0071e3, #5e5ce6);
+  background: linear-gradient(90deg, #0564e8, #00aeca 58%, #079b6b);
   background-clip: text;
   -webkit-background-clip: text;
   color: transparent;
@@ -3628,5 +3638,548 @@ select {
   .leaderboard-trend,
   .cloud-ranking-note {
     padding: 18px;
+  }
+}
+
+/* High-energy sports color layer */
+.sidebar {
+  border-right-color: rgba(8, 126, 255, 0.1);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(239, 248, 255, 0.78)),
+    rgba(255, 255, 255, 0.78);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.55) inset,
+    12px 0 36px rgba(7, 105, 210, 0.045);
+}
+
+.brand-mark,
+.avatar,
+.avatar-button,
+.mobile-avatar {
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-blue) 52%, var(--sport-cyan-deep));
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(8, 126, 255, 0.2);
+}
+
+.nav-link.is-active {
+  background: linear-gradient(135deg, #e1f1ff, #ecfff4);
+  color: #075fbd;
+  box-shadow: inset 0 0 0 1px rgba(8, 126, 255, 0.08);
+}
+
+.nav-link.is-active .icon {
+  color: var(--sport-blue);
+}
+
+.leader-card {
+  border-color: rgba(8, 126, 255, 0.11);
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 191, 232, 0.18), transparent 52%),
+    linear-gradient(145deg, #f2f9ff, #f4fff0);
+}
+
+.profile-chip,
+.status-pill {
+  border-color: rgba(8, 126, 255, 0.11);
+  background: rgba(244, 250, 255, 0.86);
+}
+
+.status-pill {
+  color: #276b9f;
+}
+
+.live-dot {
+  background: #21c77a;
+  box-shadow: 0 0 0 4px rgba(33, 199, 122, 0.14);
+}
+
+.button.primary,
+.auth-submit {
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-blue) 58%, #0078b4);
+  box-shadow: 0 10px 24px rgba(8, 126, 255, 0.24);
+}
+
+.button.dark {
+  background: linear-gradient(135deg, #071c34, #0b4b78);
+  box-shadow: 0 10px 22px rgba(7, 28, 52, 0.16);
+}
+
+.button.secondary {
+  border-color: rgba(8, 126, 255, 0.14);
+  background: rgba(247, 252, 255, 0.92);
+  color: #075fbd;
+}
+
+.button.light {
+  color: #075fbd;
+  box-shadow: 0 8px 24px rgba(8, 126, 255, 0.16);
+}
+
+.text-link {
+  color: #0870d8;
+}
+
+.panel {
+  border-color: rgba(8, 126, 255, 0.09);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: var(--shadow);
+}
+
+.hero-panel {
+  border-color: rgba(8, 126, 255, 0.12);
+  background:
+    radial-gradient(circle at 86% 10%, rgba(0, 191, 232, 0.28), transparent 31%),
+    radial-gradient(circle at 72% 105%, rgba(185, 244, 77, 0.28), transparent 38%),
+    radial-gradient(circle at 100% 82%, rgba(255, 107, 44, 0.14), transparent 30%),
+    linear-gradient(145deg, #ffffff 0%, #edf8ff 55%, #f9ffec 100%);
+  box-shadow: 0 22px 58px rgba(7, 105, 210, 0.11);
+}
+
+.hero-badge {
+  border-color: rgba(8, 126, 255, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  color: #22688f;
+}
+
+.hero-content h2 em {
+  background: linear-gradient(90deg, #0564e8 4%, #00aeca 56%, #079b6b 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.hero-ring {
+  background: conic-gradient(
+    var(--sport-blue) 0 var(--ring-value),
+    rgba(8, 126, 255, 0.1) var(--ring-value) 100%
+  );
+  filter: drop-shadow(0 10px 22px rgba(8, 126, 255, 0.16));
+}
+
+.hero-ring-inner {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow:
+    0 8px 24px rgba(7, 105, 210, 0.1),
+    inset 0 0 0 1px rgba(8, 126, 255, 0.06);
+}
+
+.habit-card {
+  border-color: rgba(8, 126, 255, 0.09);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 34px rgba(7, 105, 210, 0.07);
+}
+
+.habit-card.tone-lime {
+  background: linear-gradient(145deg, #f8fcff, #e4f3ff);
+  border-color: rgba(8, 126, 255, 0.13);
+}
+
+.habit-card.tone-blue {
+  background: linear-gradient(145deg, #f7feff, #ddf9ff);
+  border-color: rgba(0, 191, 232, 0.16);
+}
+
+.habit-card.tone-sand {
+  background: linear-gradient(145deg, #fffaf6, #ffe9dc);
+  border-color: rgba(255, 107, 44, 0.14);
+}
+
+.habit-card.tone-violet {
+  background: linear-gradient(145deg, #f8fff9, #dcf9ea);
+  border-color: rgba(9, 183, 125, 0.15);
+}
+
+.habit-card.tone-lime .habit-mark {
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-blue) 58%, var(--sport-cyan-deep));
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(8, 126, 255, 0.2);
+}
+
+.habit-card.tone-blue .habit-mark {
+  background: linear-gradient(135deg, #007fae, #00a8b2);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(0, 174, 202, 0.18);
+}
+
+.habit-card.tone-sand .habit-mark {
+  background: linear-gradient(135deg, var(--sport-orange), var(--sport-peach));
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(255, 107, 44, 0.18);
+}
+
+.habit-card.tone-violet .habit-mark {
+  background: linear-gradient(135deg, #079b6b, #2bd596);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(9, 183, 125, 0.17);
+}
+
+.habit-card.tone-lime .habit-percent,
+.tone-lime .habit-percent {
+  color: var(--sport-blue);
+}
+
+.tone-blue .habit-percent {
+  color: var(--sport-cyan);
+}
+
+.tone-sand .habit-percent {
+  color: var(--sport-orange);
+}
+
+.tone-violet .habit-percent {
+  color: var(--sport-mint);
+}
+
+.progress-track,
+.challenge-progress {
+  background: rgba(8, 126, 255, 0.1);
+}
+
+.progress-track span {
+  background: linear-gradient(90deg, var(--sport-blue-deep), var(--sport-cyan));
+}
+
+.tone-sand .progress-track span {
+  background: linear-gradient(90deg, var(--sport-orange), #ffb15e);
+}
+
+.tone-violet .progress-track span {
+  background: linear-gradient(90deg, var(--sport-mint), #57dda6);
+}
+
+.tone-teal .progress-track span {
+  background: linear-gradient(90deg, #0a9a70, #31d6a0);
+}
+
+.tone-sky .progress-track span {
+  background: linear-gradient(90deg, #008ebf, #41d9ff);
+}
+
+.inline-field input,
+.auth-field input,
+.auth-field select,
+.date-input,
+.goal-field input {
+  background-color: #eef6ff;
+}
+
+.inline-field input:focus,
+.auth-field input:focus,
+.auth-field select:focus,
+.date-input:focus,
+.goal-field input:focus {
+  background-color: #fff;
+  box-shadow: 0 0 0 3px rgba(8, 126, 255, 0.17);
+}
+
+.date-chip {
+  background: #edf5ff;
+  color: #597391;
+}
+
+.date-chip.is-active {
+  background: linear-gradient(145deg, #0457c9, #087eff 68%, #0077c7);
+  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 9px 22px rgba(8, 126, 255, 0.24);
+}
+
+.date-chip.is-active b {
+  color: #fff;
+}
+
+.date-chip.is-active i,
+.date-chip.is-active i.is-complete,
+.date-chip.is-active i.is-incomplete {
+  background: var(--sport-lime);
+}
+
+.date-chip.is-active i.is-incomplete {
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.date-chip i.is-complete,
+.month-day i.is-active,
+.month-day i.is-complete {
+  background: #21c77a;
+}
+
+.month-day.is-selected {
+  background: linear-gradient(145deg, #0457c9, #087eff 68%, #0077c7);
+  box-shadow: 0 7px 18px rgba(8, 126, 255, 0.2);
+}
+
+.record-field,
+.record-field.tone-lime,
+.record-field.tone-blue,
+.record-field.tone-sand,
+.record-field.tone-violet {
+  background: linear-gradient(145deg, #f8fcff, #eef7ff);
+}
+
+.team-hero-panel {
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 191, 232, 0.44), transparent 38%),
+    radial-gradient(circle at 8% 100%, rgba(185, 244, 77, 0.26), transparent 36%),
+    linear-gradient(135deg, #071c34, #0b4f81 58%, #087fa5);
+  box-shadow: 0 24px 62px rgba(4, 74, 153, 0.22);
+}
+
+.team-demo,
+.team-metrics strong {
+  color: #b9f7ff;
+}
+
+.hero-avatar.me {
+  background: linear-gradient(135deg, var(--sport-lime), #54e1ad);
+  color: #073158;
+}
+
+.challenge-progress span {
+  background: linear-gradient(90deg, var(--sport-blue), var(--sport-cyan), var(--sport-lime));
+}
+
+.activity-choice {
+  background: #f0f6fd;
+}
+
+.activity-choice > span {
+  background: #e2edf9;
+}
+
+.activity-choice.is-selected {
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-blue) 62%, var(--sport-cyan-deep));
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(8, 126, 255, 0.2);
+}
+
+.activity-choice.is-selected > span {
+  color: var(--sport-blue);
+}
+
+.activity-choice.is-selected .activity-icon {
+  color: var(--sport-blue);
+}
+
+.period-pills button {
+  background: #eef5fd;
+}
+
+.period-pills button.is-selected {
+  background: linear-gradient(135deg, var(--sport-blue-deep), #0078c9);
+  box-shadow: 0 6px 16px rgba(8, 126, 255, 0.18);
+}
+
+.profile-hero {
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 191, 232, 0.46), transparent 40%),
+    radial-gradient(circle at 12% 100%, rgba(185, 244, 77, 0.22), transparent 36%),
+    linear-gradient(135deg, #071c34, #0b4f81 62%, #087fa5);
+  box-shadow: 0 24px 62px rgba(4, 74, 153, 0.22);
+}
+
+.profile-avatar-large {
+  background: linear-gradient(135deg, var(--sport-lime), #62e9b3);
+  color: #073158;
+}
+
+.profile-hero-stats strong {
+  color: #b9f7ff;
+}
+
+.auth-page {
+  background: #f7fbff;
+}
+
+.auth-stage {
+  background:
+    radial-gradient(circle at 14% 10%, rgba(8, 126, 255, 0.24), transparent 34%),
+    radial-gradient(circle at 86% 20%, rgba(185, 244, 77, 0.2), transparent 30%),
+    radial-gradient(circle at 78% 88%, rgba(255, 107, 44, 0.15), transparent 32%),
+    linear-gradient(145deg, #ffffff 8%, #edf8ff 58%, #fbfff0 100%);
+}
+
+.auth-form-wrap {
+  border-left-color: rgba(8, 126, 255, 0.1);
+  background: rgba(251, 254, 255, 0.88);
+}
+
+.auth-trust {
+  border-top-color: rgba(8, 126, 255, 0.11);
+}
+
+.mobile-top {
+  border-bottom-color: rgba(8, 126, 255, 0.08);
+  background: rgba(246, 251, 255, 0.82);
+  box-shadow: 0 6px 22px rgba(7, 105, 210, 0.07);
+}
+
+.mobile-nav {
+  border-color: rgba(255, 255, 255, 0.76);
+  background: rgba(248, 252, 255, 0.88);
+  box-shadow:
+    0 18px 42px rgba(7, 105, 210, 0.17),
+    0 0 0 1px rgba(8, 126, 255, 0.08);
+}
+
+.mobile-nav .nav-link {
+  color: #70859d;
+}
+
+.mobile-nav .nav-link.is-active,
+.mobile-nav .nav-link.is-active .icon {
+  color: var(--sport-blue);
+}
+
+.mobile-nav .nav-link.is-active::before {
+  background: linear-gradient(135deg, #dcefff, #e7fff2);
+}
+
+.ranking-segment,
+.ranking-range,
+.ranking-project-tabs,
+.goal-preview {
+  background: #eaf3fd;
+}
+
+.ranking-segment button.is-selected,
+.ranking-range button.is-selected {
+  color: #075fbd;
+  box-shadow:
+    0 3px 10px rgba(7, 105, 210, 0.1),
+    inset 0 0 0 1px rgba(8, 126, 255, 0.08);
+}
+
+.ranking-project-tabs button.is-selected {
+  background: linear-gradient(145deg, #edf8ff, #f1fff7);
+  color: #075fbd;
+}
+
+.ranking-project-tabs button.is-selected span {
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-cyan-deep));
+}
+
+.ranking-detail-hint {
+  color: #5f7892;
+}
+
+.leaderboard-hero {
+  border-color: rgba(8, 126, 255, 0.11);
+  background:
+    radial-gradient(circle at 88% 16%, rgba(0, 191, 232, 0.24), transparent 32%),
+    radial-gradient(circle at 72% 100%, rgba(185, 244, 77, 0.17), transparent 34%),
+    linear-gradient(145deg, #ffffff, #eef8ff 62%, #fbfff4);
+  box-shadow: 0 20px 50px rgba(7, 105, 210, 0.1);
+}
+
+.leaderboard-medal {
+  border-color: rgba(8, 126, 255, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 14px 32px rgba(7, 105, 210, 0.1);
+}
+
+.ranking-row.is-me {
+  background: linear-gradient(135deg, #e7f4ff, #effff6);
+  box-shadow: inset 3px 0 0 var(--sport-blue);
+}
+
+.ranking-score b {
+  color: #0b4f81;
+}
+
+.health-metric-switch .metric-steps {
+  background:
+    radial-gradient(circle at 100% 0, rgba(0, 191, 232, 0.24), transparent 42%),
+    linear-gradient(145deg, #e4f3ff, #d8fbff);
+  color: #075fbd;
+}
+
+.health-metric-switch .metric-weight {
+  background:
+    radial-gradient(circle at 100% 0, rgba(185, 244, 77, 0.3), transparent 42%),
+    linear-gradient(145deg, #fff3ea, #eafff3);
+  color: #087b5a;
+}
+
+.health-metric-switch button.is-selected {
+  border-color: rgba(8, 126, 255, 0.2);
+  box-shadow: 0 14px 32px rgba(7, 105, 210, 0.13);
+}
+
+.chart-range-switch {
+  background: #eaf3fd;
+}
+
+.chart-range-switch button.is-selected {
+  color: #075fbd;
+  box-shadow:
+    0 3px 10px rgba(7, 105, 210, 0.1),
+    inset 0 0 0 1px rgba(8, 126, 255, 0.08);
+}
+
+.daily-rank-track {
+  background: rgba(8, 126, 255, 0.1);
+}
+
+.daily-rank-track i {
+  background: linear-gradient(90deg, var(--sport-blue), var(--sport-cyan));
+}
+
+.team-empty-panel {
+  background:
+    radial-gradient(circle at 84% 18%, rgba(0, 191, 232, 0.28), transparent 34%),
+    linear-gradient(135deg, #dff3ff 0%, #bff2ff 38%, #d9ff93 100%);
+  box-shadow: 0 22px 52px rgba(7, 105, 210, 0.12);
+}
+
+.team-empty-panel p {
+  color: #335b70;
+}
+
+.modal {
+  border-color: rgba(8, 126, 255, 0.12);
+  background: rgba(251, 254, 255, 0.98);
+  box-shadow: 0 28px 74px rgba(4, 74, 153, 0.18);
+}
+
+.toast {
+  background: linear-gradient(135deg, #071c34, #0b4f81);
+  box-shadow: 0 14px 34px rgba(4, 74, 153, 0.22);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-link:hover {
+    background: rgba(8, 126, 255, 0.07);
+    color: #075fbd;
+  }
+
+  .activity-choice:hover {
+    border-color: rgba(8, 126, 255, 0.2);
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .sidebar,
+  .mobile-top,
+  .mobile-nav,
+  .panel,
+  .hero-panel,
+  .habit-card,
+  .modal,
+  .auth-form-wrap {
+    background: #fff;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .panel,
+  .habit-card,
+  .date-chip,
+  .activity-choice {
+    border-color: rgba(4, 74, 153, 0.34);
+  }
+
+  .ranking-person small,
+  .habit-copy p,
+  .page-heading p {
+    color: #4d6077;
   }
 }
