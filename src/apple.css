@@ -2654,17 +2654,6 @@ select {
 }
 
 @media (max-width: 480px) {
-  .default-groups-panel {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 11px;
-  }
-
-  .default-group-list {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
   .mobile-top {
     padding-right: 14px;
     padding-left: 14px;
@@ -2986,88 +2975,6 @@ select {
 
 .team-empty-panel > div:first-child {
   max-width: 760px;
-}
-
-.default-groups-panel {
-  display: flex;
-  align-items: stretch;
-  flex-direction: column;
-  gap: 11px;
-  margin-bottom: 16px;
-  padding: 15px 18px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.035);
-  backdrop-filter: blur(18px);
-}
-
-.default-groups-toggle {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 0;
-  background: transparent;
-  text-align: left;
-}
-
-.default-groups-toggle > span:first-child {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.default-groups-summary {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  color: #7b8189;
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.default-groups-summary b {
-  color: #1677ff;
-}
-
-.default-groups-panel b {
-  color: #1d1d1f;
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.default-group-list {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-
-.default-group-list span {
-  display: inline-flex;
-  min-height: 32px;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px 0 6px;
-  border-radius: 999px;
-  background: #f4f6f9;
-  color: #515154;
-  font-size: 10px;
-  white-space: nowrap;
-}
-
-.default-group-list i {
-  display: grid;
-  width: 21px;
-  height: 21px;
-  place-items: center;
-  border-radius: 50%;
-  background: #1d1d1f;
-  color: #fff;
-  font-size: 8px;
-  font-style: normal;
 }
 
 .profile-bottom-grid {

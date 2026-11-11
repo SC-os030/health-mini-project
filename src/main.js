@@ -154,7 +154,6 @@ let state = loadState();
 let selectedRecordDate = toDateKey();
 let selectedActivityKey = 'badminton';
 let challengeDays = 7;
-let defaultGroupsExpanded = false;
 let leaderboardMode = 'individual';
 let leaderboardRange = 7;
 let leaderboardProject = 'overall';
@@ -1823,23 +1822,6 @@ function renderTeam() {
         </div>
       </header>
 
-      <section class="default-groups-panel ${defaultGroupsExpanded ? 'is-expanded' : ''}">
-        <button class="default-groups-toggle" type="button" data-action="toggle-default-groups" aria-expanded="${defaultGroupsExpanded}">
-          <span>
-            <span class="kicker">DEFAULT CHALLENGE</span>
-            <b>走路 · 体重</b>
-          </span>
-          <span class="default-groups-summary">${DEFAULT_TEAM_GROUPS.length} 个公司小组 <b>${defaultGroupsExpanded ? '收起' : '展开'}</b>⌄</span>
-        </button>
-        ${defaultGroupsExpanded ? `
-          <div class="default-group-list">
-            ${DEFAULT_TEAM_GROUPS.map((group) => `
-              <span><i>${group.avatarText}</i>${group.name}</span>
-            `).join('')}
-          </div>
-        ` : ''}
-      </section>
-
       ${team.exists ? `
         <section class="team-hero-panel">
           <div class="team-hero-copy">
@@ -2935,10 +2917,6 @@ document.addEventListener('click', async (event) => {
   }
   if (action === 'select-activity') {
     selectedActivityKey = actionTarget.dataset.activity;
-    renderPage({ preserveScroll: true });
-  }
-  if (action === 'toggle-default-groups') {
-    defaultGroupsExpanded = !defaultGroupsExpanded;
     renderPage({ preserveScroll: true });
   }
   if (action === 'select-days') {
