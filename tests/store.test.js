@@ -454,11 +454,21 @@ test('小队榜按当前组队挑战项目计算独立完成率', () => {
 test('照片打卡会保存到当天记录并随数据备份', () => {
   let state = loadState();
   const photo = 'data:image/jpeg;base64,ZmFrZS1waG90bw==';
-  const result = attachPhotoCheckin(state, 'water', photo, { increment: 250 });
+  const signedUrl = 'https://example.com/temporary-checkin-photo.jpg';
+  const result = attachPhotoCheckin(state, 'water', photo, {
+    increment: 250,
+    cloudRef: {
+      bucket: 'health-checkin-photos',
+      key: 'user/2026-11-13/water-photo.jpg',
+      dataUrl: signedUrl,
+    },
+  });
   assert.equal(result.ok, true);
   state = result.state;
   const record = getDayRecord(state, toDateKey());
   assert.equal(record.photos.water.dataUrl, photo);
+  assert.equal(record.photos.water.bucket, 'health-checkin-photos');
+  assert.equal(record.photos.water.key, 'user/2026-11-13/water-photo.jpg');
   assert.equal(record.water, 250);
   assert.match(exportState(state), /data:image\/jpeg/);
 

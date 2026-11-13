@@ -857,10 +857,10 @@ export function attachPhotoCheckin(state, projectKey, photo, options = {}) {
   const photos = {
     ...(record.photos || {}),
     [projectKey]: {
+      ...(options.cloudRef || {}),
       dataUrl: photo,
       capturedAt: Date.now(),
       label: options.label || `${project.name}照片打卡`,
-      ...(options.cloudRef || {}),
     },
   };
   nextState.records[dateKey] = {

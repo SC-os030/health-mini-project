@@ -2885,7 +2885,7 @@ async function captureCheckinPhoto(projectKey) {
       showToast('云端照片暂不可用，已切换为本地社区发布', 'info');
     }
   }
-  pendingPhoto = { projectKey, dataUrl: cloudRef?.dataUrl || dataUrl, cloudRef };
+  pendingPhoto = { projectKey, dataUrl, cloudRef };
   const amountField = projectKey === 'water'
     ? `
       <label class="modal-field">
