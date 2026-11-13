@@ -1602,12 +1602,19 @@ function renderHealthRecords() {
   const record = getDayRecord(state, selectedRecordDate);
   const projects = selectedProjects(state);
   const calendar = monthCalendar(calendarCursor);
-  const localCommunity = historyOverview(state, 7).filter((item) => (
-    Object.keys(item.photos || {}).length > 0
-  ));
-  const community = Array.isArray(state.cloudCommunity)
+  const localCommunity = historyOverview(state, 7)
+    .filter((item) => Object.keys(item.photos || {}).length > 0)
+    .map((item) => ({
+      ...item,
+      key: `local-${state.profile.id}-${item.key}`,
+      dateKey: item.key,
+      authorName: state.profile.nickname || state.profile.realName || '我',
+      authorAvatar: state.profile.avatarText || '我',
+    }));
+  const cloudCommunity = Array.isArray(state.cloudCommunity)
     ? state.cloudCommunity.map((share) => ({
       key: `${share.user_id}-${share.record_date}`,
+      dateKey: share.record_date,
       dateLabel: dateLabel(share.record_date),
       authorName: share.nickname || '用户',
       authorAvatar: share.avatar_text || '用',
@@ -1619,7 +1626,14 @@ function renderHealthRecords() {
         unit: project.unit,
       })),
     }))
-    : localCommunity;
+    : [];
+  const seenCommunity = new Set();
+  const community = [...localCommunity, ...cloudCommunity].filter((item) => {
+    const dedupeKey = `${item.dateKey}-${item.authorName}`;
+    if (seenCommunity.has(dedupeKey)) return false;
+    seenCommunity.add(dedupeKey);
+    return true;
+  });
   return `
     <section class="page records-page">
       <header class="page-heading">
@@ -2867,8 +2881,8 @@ async function captureCheckinPhoto(projectKey) {
     try {
       cloudRef = await uploadCheckinPhoto(dataUrl, authSession.uid, projectKey, toDateKey());
     } catch (error) {
-      showToast(error.message || '照片上传失败，请检查存储配置', 'error');
-      return;
+      cloudRef = null;
+      showToast('云端照片暂不可用，已切换为本地社区发布', 'info');
     }
   }
   pendingPhoto = { projectKey, dataUrl: cloudRef?.dataUrl || dataUrl, cloudRef };
@@ -2885,8 +2899,8 @@ async function captureCheckinPhoto(projectKey) {
     : '';
   openModal({
     title: `${project.name} · 照片打卡`,
-    description: '照片压缩后会保存在当天的健康记录中，可用于回顾真实行动。',
-    submitLabel: '确认照片打卡',
+    description: '照片确认后会保存到当天的健康记录，并展示在社区分享中。',
+    submitLabel: '发布照片打卡',
     wide: true,
     content: `
       <div class="photo-confirm-preview">
@@ -2894,7 +2908,9 @@ async function captureCheckinPhoto(projectKey) {
         <span>${icon('camera')} 刚刚拍摄</span>
       </div>
       ${amountField}
-      <p class="photo-privacy-note">当前照片仅保存在此浏览器，不会上传到公开网络。</p>
+      <p class="photo-privacy-note">${cloudAuthenticated
+        ? '照片会保存到当前账号的私有云存储，并出现在已登录成员可见的社区分享中。'
+        : '当前为本地登录，照片保存在此浏览器，并显示在本机的社区分享中。'}</p>
     `,
     onSubmit(formData) {
       if (!pendingPhoto) return false;
@@ -2913,7 +2929,7 @@ async function captureCheckinPhoto(projectKey) {
         return false;
       }
       state = result.state;
-      showToast('照片打卡已保存');
+      showToast('照片打卡已发布到社区分享');
       renderPage({
         preserveScroll: true,
         animateProject: photoProject,
