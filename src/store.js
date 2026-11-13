@@ -457,12 +457,6 @@ export function weightManagementScore(value, baseline, target, previousValue = n
   return weightManagementBreakdown(value, baseline, target, previousValue).total;
 }
 
-function earliestWeightDate(records) {
-  return Object.entries(records || {})
-    .filter(([, record]) => Number(record.weight || 0) > 0)
-    .sort(([left], [right]) => left.localeCompare(right))[0]?.[0] || null;
-}
-
 function seedRecord(dateKey, values) {
   return {
     steps: values.steps,
@@ -1209,11 +1203,6 @@ export function teamOverview(state) {
 
 export function weeklyOverview(state, endKey = toDateKey()) {
   const projects = selectedProjects(state);
-  const weightBaselineDate = state.goals.weightBaselineDate || earliestWeightDate(state.records);
-  const firstWeightRecord = weightBaselineDate
-    ? getDayRecord(state, weightBaselineDate)
-    : { weight: 0 };
-  const weightBaseline = state.goals.weightBaseline || firstWeightRecord.weight;
   return lastDateKeys(7, endKey).map((key) => {
     const record = getDayRecord(state, key);
     const ratios = projects.map((project) => {
@@ -1221,13 +1210,7 @@ export function weeklyOverview(state, endKey = toDateKey()) {
         return walkingScore(record.steps, state.goals.steps) / 100;
       }
       if (project.key === 'weight') {
-        if (!weightBaselineDate || key <= weightBaselineDate) return 0;
-        return weightManagementScore(
-          record.weight,
-          weightBaseline,
-          state.goals.weight,
-          getDayRecord(state, shiftDateKey(key, -1)).weight,
-        ) / 100;
+        return Number(record.weight || 0) > 0 ? 1 : 0;
       }
       return progressRatio(project, record[project.key], state.goals[project.key]);
     });
@@ -1246,24 +1229,13 @@ export function weeklyOverview(state, endKey = toDateKey()) {
 export function homeOverview(state) {
   const today = toDateKey();
   const record = getDayRecord(state, today);
-  const previousWeight = Number(getDayRecord(state, shiftDateKey(today, -1)).weight || 0);
-  const weightBaselineDate = state.goals.weightBaselineDate || earliestWeightDate(state.records);
-  const firstWeightRecord = weightBaselineDate
-    ? getDayRecord(state, weightBaselineDate)
-    : { weight: 0 };
-  const weightBaseline = state.goals.weightBaseline || firstWeightRecord.weight;
   const cards = selectedProjects(state).map((project) => {
     const goal = Number(state.goals[project.key] || project.goal);
     const value = Number(record[project.key] || 0);
-    const weightBreakdown = project.key === 'weight'
-      && weightBaselineDate
-      && today > weightBaselineDate
-      ? weightManagementBreakdown(value, weightBaseline, goal, previousWeight)
-      : null;
     const score = project.key === 'steps'
       ? walkingScore(value, goal)
       : project.key === 'weight'
-        ? weightBreakdown?.total || 0
+        ? (value > 0 ? 100 : 0)
         : Math.round(progressRatio(project, value, goal) * 100);
     const ratio = score / 100;
     const remaining = project.direction === 'decrease'
@@ -1276,15 +1248,9 @@ export function homeOverview(state) {
       percent: score,
       valueText: formatNumber(value, project.decimals),
       goalText: formatNumber(goal, project.decimals),
-      done: project.key === 'weight'
-        ? Boolean(weightBreakdown?.progress)
-        : score >= 100,
+      done: project.key === 'weight' ? value > 0 : score >= 100,
       remainingText: project.key === 'weight'
-        ? (value <= 0
-          ? '输入今天的体重'
-          : (!weightBaselineDate || today <= weightBaselineDate)
-            ? '基线已记录，明天开始评分'
-            : (weightBreakdown?.progress > 0 ? '比基线更接近目标' : '继续向目标靠近'))
+        ? (value > 0 ? '今天已记录' : '输入今天的体重')
         : ratio >= 1
           ? '今天已完成'
           : `还差 ${formatNumber(remaining, project.decimals)} ${project.unit}`,

@@ -60,7 +60,6 @@ import {
   updateProfile,
   validateTeamActivity,
   walkingScore,
-  weightManagementScore,
   weekdayShort,
 } from './store.js';
 
@@ -894,14 +893,7 @@ function ringStyle(percent) {
 
 function healthScoreForProject(project, value, goal, dateKey) {
   if (project.key === 'steps') return walkingScore(value, goal);
-  if (project.key === 'weight') {
-    return weightManagementScore(
-      value,
-      state.goals.weightBaseline || value,
-      goal,
-      Number(getDayRecord(state, shiftDateKey(dateKey, -1)).weight || 0),
-    );
-  }
+  if (project.key === 'weight') return Number(value || 0) > 0 ? 100 : 0;
   return Math.round(progressRatio(project, value, goal) * 100);
 }
 
@@ -1553,14 +1545,8 @@ function renderWeightLineChart(data) {
 function renderHealthVisualization() {
   const project = getProject(recordChartProject) || getProject('steps');
   const today = getDayRecord(state, toDateKey());
-  const previousWeight = Number(getDayRecord(state, shiftDateKey(toDateKey(), -1)).weight || 0);
   const stepScore = walkingScore(today.steps, state.goals.steps);
-  const weightScore = weightManagementScore(
-    today.weight,
-    state.goals.weightBaseline || today.weight,
-    state.goals.weight,
-    previousWeight,
-  );
+  const weightScore = Number(today.weight || 0) > 0 ? 100 : 0;
   const data = healthChartData(project.key, recordChartRange);
   const rangeOptions = project.key === 'steps'
     ? [['day', '每天'], ['week', '每周'], ['month', '每月'], ['year', '每年']]
@@ -1719,12 +1705,7 @@ function renderHealthRecords() {
               const percent = project.key === 'steps'
                 ? walkingScore(value, goal)
                 : project.key === 'weight'
-                  ? weightManagementScore(
-                    value,
-                    state.goals.weightBaseline || value,
-                    goal,
-                    Number(getDayRecord(state, shiftDateKey(selectedRecordDate, -1)).weight || 0),
-                  )
+                  ? (value > 0 ? 100 : 0)
                   : Math.round(progressRatio(project, value, goal) * 100);
               return `
                 <article class="record-field ${projectToneClass(project.tone)}">
@@ -1734,7 +1715,9 @@ function renderHealthRecords() {
                   </span>
                   <span class="record-display-value">${formatNumber(value, project.decimals)} <em>${project.unit}</em></span>
                   <span class="record-display-track"><i style="width:${percent}%"></i></span>
-                  <small class="record-display-status">${percent >= 100 ? '已达标' : `得分 ${percent}`}</small>
+                  <small class="record-display-status">${project.key === 'weight' && value > 0
+                    ? '今天已记录'
+                    : percent >= 100 ? '已达标' : `得分 ${percent}`}</small>
                 </article>
               `;
             }).join('')}

@@ -234,11 +234,13 @@ test('走路采用连续比例得分，体重按进度、平稳度和记录度�
   assert.equal(result.ok, true);
   state = result.state;
   assert.equal(state.goals.weightBaseline, 80);
-  assert.equal(homeOverview(state).cards.find((card) => card.key === 'weight').done, false);
+  const recordedCard = homeOverview(state).cards.find((card) => card.key === 'weight');
+  assert.equal(recordedCard.percent, 100);
+  assert.equal(recordedCard.done, true);
   state.goals.weightBaselineDate = shiftDateKey(toDateKey(), -1);
   state.records[toDateKey()].weight = 79;
   const improvedCard = homeOverview(state).cards.find((card) => card.key === 'weight');
-  assert.equal(improvedCard.percent, 44);
+  assert.equal(improvedCard.percent, 100);
   assert.equal(improvedCard.done, true);
 });
 
