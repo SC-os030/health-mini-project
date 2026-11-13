@@ -7,6 +7,7 @@ import {
   TEAM_ACTIVITIES,
   attachPhotoCheckin,
   completeDailyCheckin,
+  createDefaultState,
   createTeam,
   dailyCheckinStatus,
   exportState,
@@ -268,6 +269,50 @@ test('累计步数榜使用区间总步数，小队按成员人均计算', () =>
   const customTeam = board.teams.find((team) => !team.isDefaultGroup);
   assert.equal(customTeam.cumulativeSteps.total, 12000);
   assert.equal(customTeam.cumulativeSteps.perMember, 12000);
+});
+
+test('排行榜体重使用当前体重与目标差值，小队按成员差值求和', () => {
+  const state = createDefaultState();
+  const today = toDateKey();
+  state.profile.groupCode = 'personal_center';
+  state.goals.weight = 70;
+  state.records[today] = {
+    ...getDayRecord(state, today),
+    weight: 73,
+  };
+  state.cloudProfiles = [
+    {
+      user_id: 'weight-peer-a',
+      nickname: '队员甲',
+      avatar_text: '甲',
+      group_code: 'personal_center',
+      goals: { ...state.goals, weight: 70 },
+      enabled_projects: [...DEFAULT_PROJECT_KEYS],
+    },
+    {
+      user_id: 'weight-peer-b',
+      nickname: '队员乙',
+      avatar_text: '乙',
+      group_code: 'personal_center',
+      goals: { ...state.goals, weight: 70 },
+      enabled_projects: [...DEFAULT_PROJECT_KEYS],
+    },
+  ];
+  state.cloudDailyRecords = {
+    'weight-peer-a': {
+      [today]: { ...getDayRecord(state, today), weight: 68 },
+    },
+    'weight-peer-b': {
+      [today]: { ...getDayRecord(state, today), weight: 66 },
+    },
+  };
+
+  const board = leaderboardOverview(state, 1);
+  assert.equal(board.myPerson.weightSummary.difference, 3);
+  const group = board.teams.find((team) => team.code === 'personal_center');
+  assert.equal(group.weightSummary.memberCount, 3);
+  assert.equal(group.weightSummary.difference, -3);
+  assert.equal(createDefaultState().settings.taskReminderDisabled, false);
 });
 
 test('小队榜默认展示六个公司小组', () => {

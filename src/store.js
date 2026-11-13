@@ -525,6 +525,7 @@ export function createDefaultState(now = new Date()) {
       dataSource: 'manual',
       wechatHealthConnected: false,
       lastManualInputAt: null,
+      taskReminderDisabled: false,
     },
     meta: {
       createdAt: now.getTime(),
@@ -1555,12 +1556,24 @@ export function leaderboardOverview(state, range = 7) {
         },
       ];
     }));
+    const latestWeightDay = daily.slice().reverse().find((day) => {
+      const weight = day.projects.find((item) => item.key === 'weight');
+      return Number(weight?.value || 0) > 0 && Number(weight?.goal || 0) > 0;
+    });
+    const latestWeight = latestWeightDay?.projects.find((item) => item.key === 'weight');
     return {
       ...person,
       daily,
       rating: averageRate,
       completedTotal,
       projectScores,
+      weightSummary: latestWeight
+        ? {
+          dateKey: latestWeightDay.dateKey,
+          difference: Math.round((latestWeight.value - latestWeight.goal) * 10) / 10,
+          target: latestWeight.goal,
+        }
+        : null,
       cumulativeSteps: {
         total: Number(projectScores.steps?.totalValue || 0),
         perMember: Number(projectScores.steps?.totalValue || 0),
@@ -1589,6 +1602,12 @@ export function leaderboardOverview(state, range = 7) {
       const stepTotal = (team.members || []).reduce((sum, member) => (
         sum + Number(memberRecordFor(member.id, dateKey)?.steps || 0)
       ), 0);
+      const weightDifferences = memberStats.flatMap((item) => {
+        const weight = item.projects.find((project) => project.key === 'weight');
+        return Number(weight?.value || 0) > 0 && Number(weight?.goal || 0) > 0
+          ? [Number(weight.value) - Number(weight.goal)]
+          : [];
+      });
       return {
         dateKey,
         rate: Math.round(memberStats.reduce((sum, item) => sum + item.rate, 0) / memberCount),
@@ -1597,6 +1616,10 @@ export function leaderboardOverview(state, range = 7) {
         projectRates,
         stepTotal,
         stepPerMember: Math.round(stepTotal / memberCount),
+        weightDifference: Math.round(
+          weightDifferences.reduce((sum, value) => sum + value, 0) * 10,
+        ) / 10,
+        weightMembers: weightDifferences.length,
       };
     });
     const rating = Math.round(daily.reduce((sum, day) => sum + day.rate, 0) / daily.length);
@@ -1689,6 +1712,7 @@ export function leaderboardOverview(state, range = 7) {
       rating: challengeRating,
     } : null;
     const cumulativeStepTotal = daily.reduce((sum, day) => sum + Number(day.stepTotal || 0), 0);
+    const latestWeightDay = daily.slice().reverse().find((day) => Number(day.weightMembers || 0) > 0);
     return {
       id: team.id,
       name: team.name,
@@ -1703,6 +1727,13 @@ export function leaderboardOverview(state, range = 7) {
         perMember: Math.round(cumulativeStepTotal / Math.max(1, team.members?.length || 0)),
         todayPerMember: Number(daily[daily.length - 1]?.stepPerMember || 0),
       },
+      weightSummary: latestWeightDay
+        ? {
+          dateKey: latestWeightDay.dateKey,
+          difference: Number(latestWeightDay.weightDifference || 0),
+          memberCount: Number(latestWeightDay.weightMembers || 0),
+        }
+        : null,
       challenge: challengeScore,
       challengeScores: challengeScore ? { [challengeActivity.key]: challengeScore } : {},
       today: daily.find((day) => day.dateKey === today) || daily[daily.length - 1],
@@ -1812,11 +1843,24 @@ export function leaderboardOverview(state, range = 7) {
           Number(challengeScores.steps.daily.find((day) => day.dateKey === dateKey)?.stepTotal || 0)
           / Math.max(1, memberCount),
         ),
+        weightDifference: Math.round(
+          members.reduce((sum, profile) => {
+            const value = Number(memberRecordFor(profile.user_id, dateKey)?.weight || 0);
+            const goal = Number(profile.goals?.weight || state.goals.weight || 0);
+            return value > 0 && goal > 0 ? sum + value - goal : sum;
+          }, 0) * 10,
+        ) / 10,
+        weightMembers: members.filter((profile) => {
+          const value = Number(memberRecordFor(profile.user_id, dateKey)?.weight || 0);
+          const goal = Number(profile.goals?.weight || state.goals.weight || 0);
+          return value > 0 && goal > 0;
+        }).length,
       };
     });
     const rating = Math.round(
       daily.reduce((sum, day) => sum + day.rate, 0) / Math.max(1, daily.length),
     );
+    const latestWeightDay = daily.slice().reverse().find((day) => Number(day.weightMembers || 0) > 0);
     return {
       id: group.id,
       code: group.code,
@@ -1834,6 +1878,13 @@ export function leaderboardOverview(state, range = 7) {
           ), 0) / Math.max(1, memberCount),
         ),
       },
+      weightSummary: latestWeightDay
+        ? {
+          dateKey: latestWeightDay.dateKey,
+          difference: Number(latestWeightDay.weightDifference || 0),
+          memberCount: Number(latestWeightDay.weightMembers || 0),
+        }
+        : null,
       projectScores: Object.fromEntries(allProjects.map((project) => {
         const score = challengeScores[project.key];
         return [project.key, {

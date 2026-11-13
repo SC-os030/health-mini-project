@@ -1795,6 +1795,66 @@ select {
   text-align: center;
 }
 
+.reminder-optout {
+  position: relative;
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 9px;
+  margin: 15px auto 0;
+  color: #63758c;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 550;
+}
+
+.reminder-optout input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.reminder-optout-marker {
+  display: grid;
+  width: 23px;
+  height: 23px;
+  place-items: center;
+  border: 1.5px solid rgba(8, 126, 255, 0.28);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.86);
+  color: transparent;
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.reminder-optout-marker .icon {
+  width: 13px;
+  height: 13px;
+  transform: scale(0.7);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.reminder-optout input:checked + .reminder-optout-marker {
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--sport-blue-deep), var(--sport-cyan-deep));
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(8, 126, 255, 0.22);
+}
+
+.reminder-optout input:checked + .reminder-optout-marker .icon {
+  transform: scale(1);
+}
+
+.reminder-optout input:focus-visible + .reminder-optout-marker {
+  box-shadow: 0 0 0 3px rgba(8, 126, 255, 0.18);
+}
+
 .toast {
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 999px;
@@ -4085,6 +4145,18 @@ select {
   color: #0b4f81;
 }
 
+.ranking-score b.is-negative,
+.leaderboard-big-score strong.is-negative,
+.daily-rank-row strong.is-negative {
+  color: #07835f;
+}
+
+.ranking-score b.is-positive,
+.leaderboard-big-score strong.is-positive,
+.daily-rank-row strong.is-positive {
+  color: #d95d1d;
+}
+
 .health-metric-switch .metric-steps {
   background:
     radial-gradient(circle at 100% 0, rgba(0, 191, 232, 0.24), transparent 42%),
@@ -4121,6 +4193,14 @@ select {
 
 .daily-rank-track i {
   background: linear-gradient(90deg, var(--sport-blue), var(--sport-cyan));
+}
+
+.daily-rank-track i.is-negative {
+  background: linear-gradient(90deg, #09b77d, #5fdda9);
+}
+
+.daily-rank-track i.is-positive {
+  background: linear-gradient(90deg, var(--sport-orange), #ffb15e);
 }
 
 .team-empty-panel {
