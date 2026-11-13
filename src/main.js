@@ -11,10 +11,8 @@ import {
   migrateLocalPhotosToCloud,
   onCloudAuthStateChange,
   saveCloudHealthData,
-  sendPhoneLoginCode,
   signOutCloud,
   uploadCheckinPhoto,
-  verifyPhoneLoginCode,
 } from './cloud.js';
 import { choosePhoto, compressPhoto } from './media.js';
 import {
@@ -31,6 +29,7 @@ import {
   exportState,
   formatNumber,
   getDayRecord,
+  getAuthSession,
   getProject,
   historyOverview,
   homeOverview,
@@ -38,6 +37,7 @@ import {
   lastDateKeys,
   leaderboardOverview,
   loadState,
+  loginWithRealName,
   logoutCurrentUser,
   maskPhone,
   normalizeState,
@@ -188,11 +188,10 @@ let authBootStatus = 'checking';
 let authDraft = {
   phone: state.profile.phone || '',
   realName: state.profile.realName || '',
-  groupCode: state.profile.groupCode || 'personal',
+  groupCode: state.profile.groupCode || 'personal_center',
   consent: false,
 };
-let phoneLoginChallenge = null;
-let phoneLoginPhone = '';
+let cloudAuthenticated = false;
 let cloudSyncStatus = 'idle';
 let cloudSyncTimer = 0;
 let cloudSyncRunning = false;
@@ -269,11 +268,11 @@ function renderAuthScreen() {
 
       <div class="auth-form-wrap">
         <form class="auth-form" data-form="login">
-          <span class="kicker">IDENTITY VERIFICATION</span>
-          <h2>${authBootStatus === 'checking' ? '正在连接健康空间' : '实名登录'}</h2>
+          <span class="kicker">HEALTH SPACE ACCESS</span>
+          <h2>${authBootStatus === 'checking' ? '正在连接健康空间' : '姓名与手机号登录'}</h2>
           <p>${authBootStatus === 'checking'
             ? '正在检查登录状态。'
-            : '使用本人手机号、姓名和短信验证码登录，数据会自动保存。'}</p>
+            : '使用本人姓名、手机号和所属小组直接进入健康空间。'}</p>
           <label class="auth-field" data-phone-field>
             <span>手机号</span>
             <input name="phone" type="tel" inputmode="numeric" maxlength="11" pattern="1[3-9][0-9]{9}" value="${escapeHtml(authDraft.phone)}" placeholder="请输入 11 位手机号" autocomplete="tel" aria-describedby="phone-error" required />
@@ -291,37 +290,16 @@ function renderAuthScreen() {
                 <option value="${group.code}" ${authDraft.groupCode === group.code ? 'selected' : ''}>${group.name}</option>
               `).join('')}
             </select>
-            <small class="auth-field-hint">用于个人、团体、理赔三个默认小组的排行榜统计。</small>
-          </label>
-          <label class="auth-field" data-code-field>
-            <span>短信验证码</span>
-            <span class="auth-code-row">
-              <input
-                name="code"
-                type="text"
-                inputmode="numeric"
-                maxlength="6"
-                placeholder="${phoneLoginChallenge ? '请输入 6 位验证码' : '请先获取验证码'}"
-                autocomplete="one-time-code"
-                ${phoneLoginChallenge ? '' : 'disabled'}
-                required
-              />
-              <button class="button secondary auth-code-button" type="button" data-action="send-login-code" ${authBootStatus === 'checking' ? 'disabled' : ''}>
-                ${phoneLoginChallenge ? '重新获取' : '获取验证码'}
-              </button>
-            </span>
-            <small class="auth-field-hint">${phoneLoginChallenge
-              ? `验证码已发送至 ${maskPhone(phoneLoginPhone)}`
-              : '填写手机号和姓名后，点击获取验证码。'}</small>
+            <small class="auth-field-hint">用于公司小组与小队排行榜统计。</small>
           </label>
           <label class="auth-consent">
             <input name="consent" type="checkbox" ${authDraft.consent ? 'checked' : ''} required />
             <span>我已阅读并同意健康数据仅用于个人记录与组队挑战。</span>
           </label>
-          <button class="button primary auth-submit" type="submit" data-login-submit disabled>${phoneLoginChallenge ? '验证并进入健康空间' : '请先获取验证码'} ${icon('arrow')}</button>
+          <button class="button primary auth-submit" type="submit" data-login-submit disabled>进入健康空间 ${icon('arrow')}</button>
         </form>
         <div class="auth-trust">
-          <span>${icon('cloud')} 健康数据自动保存</span>
+          <span>${icon('cloud')} 健康数据保存在当前浏览器</span>
           <span>${icon('check')} 支持手机浏览器</span>
           <span>${icon('wechat')} 微信健康待接入</span>
         </div>
@@ -336,7 +314,6 @@ function updateLoginValidation() {
   const phoneInput = form.querySelector('[name="phone"]');
   const nameInput = form.querySelector('[name="realName"]');
   const groupInput = form.querySelector('[name="groupCode"]');
-  const codeInput = form.querySelector('[name="code"]');
   const consent = form.querySelector('[name="consent"]');
   const submit = form.querySelector('[data-login-submit]');
   const phoneField = form.querySelector('[data-phone-field]');
@@ -344,7 +321,6 @@ function updateLoginValidation() {
   const phoneError = form.querySelector('[data-phone-error]');
   const nameError = form.querySelector('[data-name-error]');
   const phone = phoneInput.value.replace(/\s+/g, '');
-  const code = codeInput.value.replace(/\D/g, '');
   const phoneValid = /^1[3-9]\d{9}$/.test(phone);
   const name = nameInput.value.trim();
   const nameValid = /^[\u3400-\u9fff·]{2,20}$/.test(name);
@@ -363,8 +339,6 @@ function updateLoginValidation() {
     && nameValid
     && groupValid
     && consent.checked
-    && Boolean(phoneLoginChallenge)
-    && /^\d{6}$/.test(code)
   );
 }
 
@@ -481,6 +455,9 @@ function promptForFirstEntry() {
 }
 
 function cloudStatusMarkup() {
+  if (authSession?.localOnly && !cloudAuthenticated) {
+    return '<span class="status-pill">本地保存</span>';
+  }
   if (cloudSyncStatus === 'syncing') {
     return '<span class="status-pill"><span class="live-dot"></span>正在保存</span>';
   }
@@ -493,50 +470,53 @@ function cloudStatusMarkup() {
   return '<span class="status-pill">准备就绪</span>';
 }
 
-async function requestPhoneLoginCode() {
-  const form = main.querySelector('[data-form="login"]');
-  if (!form) return;
-  const phone = String(form.querySelector('[name="phone"]')?.value || '').replace(/\D/g, '');
-  const realName = String(form.querySelector('[name="realName"]')?.value || '').trim();
-  const groupCode = String(form.querySelector('[name="groupCode"]')?.value || '');
-  if (!/^1[3-9]\d{9}$/.test(phone)) {
-    showToast('请输入正确的 11 位手机号', 'error');
-    return;
-  }
-  if (!/^[\u3400-\u9fff·]{2,20}$/.test(realName)) {
-    showToast('请输入 2-20 位中文姓名', 'error');
-    return;
-  }
-  if (!DEFAULT_TEAM_GROUPS.some((group) => group.code === groupCode)) {
-    showToast('请选择所属小组', 'error');
-    return;
-  }
-  const sendButton = form.querySelector('[data-action="send-login-code"]');
-  if (sendButton) {
-    sendButton.disabled = true;
-    sendButton.textContent = '发送中…';
-  }
-  authDraft = {
-    ...authDraft,
-    phone,
-    realName,
+function completeDirectLogin({ phone, realName, groupCode }) {
+  const canReuseLocalState = state.profile.phone === phone;
+  const baseState = canReuseLocalState ? state : createDefaultState();
+  baseState.profile.groupCode = groupCode;
+  const result = loginWithRealName(baseState, { phone, realName });
+  if (!result.ok) return result;
+  state = saveState({
+    ...result.state,
+    profile: {
+      ...result.state.profile,
+      groupCode,
+    },
+  });
+  authSession = {
+    ...result.session,
+    uid: state.profile.id,
     groupCode,
-    consent: Boolean(form.querySelector('[name="consent"]')?.checked),
+    localOnly: true,
   };
-  try {
-    const result = await sendPhoneLoginCode(phone);
-    phoneLoginChallenge = result.challenge;
-    phoneLoginPhone = phone;
-    renderAuthScreen();
-    showToast('验证码已发送，请查看手机短信');
-    requestAnimationFrame(() => main.querySelector('[name="code"]')?.focus());
-  } catch (error) {
-    if (sendButton) {
-      sendButton.disabled = false;
-      sendButton.textContent = phoneLoginChallenge ? '重新获取' : '获取验证码';
-    }
-    showToast(error.message || '验证码发送失败', 'error');
-  }
+  cloudAuthenticated = false;
+  cloudSyncStatus = 'local';
+  authBootStatus = 'ready';
+  document.body.classList.remove('auth-mode');
+  renderPage();
+  showToast(`欢迎，${realName}`);
+  setTimeout(promptForFirstEntry, 320);
+  return { ok: true };
+}
+
+function restoreLocalSession() {
+  const savedSession = getAuthSession();
+  if (!savedSession) return false;
+  authSession = {
+    ...savedSession,
+    uid: state.profile.id,
+    realName: state.profile.realName || savedSession.realName,
+    phone: state.profile.phone || savedSession.phone,
+    groupCode: state.profile.groupCode,
+    localOnly: true,
+  };
+  cloudAuthenticated = false;
+  cloudSyncStatus = 'local';
+  authBootStatus = 'ready';
+  document.body.classList.remove('auth-mode');
+  renderPage();
+  setTimeout(promptForFirstEntry, 320);
+  return true;
 }
 
 function cloudRecordFromRow(row, existing = {}) {
@@ -743,10 +723,9 @@ async function enterCloudSession(session, identity = {}) {
     realName: state.profile.realName || identity.realName || state.profile.nickname,
     loggedInAt: Date.now(),
   };
+  cloudAuthenticated = true;
   logoutCurrentUser();
   authBootStatus = 'ready';
-  phoneLoginChallenge = null;
-  phoneLoginPhone = '';
   cloudSyncStatus = 'synced';
   document.body.classList.remove('auth-mode');
   renderPage();
@@ -757,25 +736,13 @@ async function enterCloudSession(session, identity = {}) {
   setTimeout(promptForFirstEntry, 320);
 }
 
-async function completePhoneLogin(code) {
-  if (!phoneLoginChallenge) {
-    showToast('请先获取短信验证码', 'error');
-    return;
-  }
-  const session = await verifyPhoneLoginCode(phoneLoginChallenge, code);
-  await enterCloudSession(session, {
-    phone: phoneLoginPhone,
-    realName: authDraft.realName.trim(),
-    groupCode: authDraft.groupCode,
-  });
-}
-
 async function bootstrapCloudAuth() {
   authBootStatus = 'checking';
   renderPage();
   try {
     const session = await getCloudSession();
     if (!session) {
+      if (restoreLocalSession()) return;
       authBootStatus = 'ready';
       renderPage();
       return;
@@ -786,6 +753,7 @@ async function bootstrapCloudAuth() {
       groupCode: state.profile.groupCode,
     });
   } catch (error) {
+    if (restoreLocalSession()) return;
     authBootStatus = 'ready';
     authSession = null;
     renderPage();
@@ -794,7 +762,7 @@ async function bootstrapCloudAuth() {
 }
 
 function scheduleCloudSync(nextState = state) {
-  if (!authSession?.uid || cloudHydrating) return;
+  if (!cloudAuthenticated || !authSession?.uid || cloudHydrating) return;
   cloudSyncPendingState = nextState;
   clearTimeout(cloudSyncTimer);
   cloudSyncTimer = setTimeout(flushCloudSync, 650);
@@ -822,7 +790,7 @@ async function flushCloudSync() {
 }
 
 async function refreshCloudWorkspace() {
-  if (!authSession?.uid) return;
+  if (!cloudAuthenticated || !authSession?.uid) return;
   if (cloudSyncRunning || cloudSyncPendingState) {
     clearTimeout(cloudRefreshTimer);
     cloudRefreshTimer = setTimeout(refreshCloudWorkspace, 650);
@@ -2636,8 +2604,17 @@ function openTaskPicker(options = {}) {
         </div>
       </div>
       <div class="task-picker-grid">
-        ${fixedProjects.map((project) => `
-          <div class="task-picker-option is-fixed ${projectToneClass(project.tone)}">
+        ${fixedProjects.map((project) => {
+          const initialGoal = project.key === 'weight' && !state.goals.weightTargetSet
+            ? ''
+            : state.goals[project.key];
+          const numericGoal = Number(initialGoal);
+          const goalComplete = String(initialGoal ?? '').trim() !== ''
+            && Number.isFinite(numericGoal)
+            && numericGoal >= Number(GOAL_INPUT_MIN[project.key])
+            && numericGoal <= Number(GOAL_INPUT_MAX[project.key]);
+          return `
+          <div class="task-picker-option is-fixed ${goalComplete ? 'is-complete' : ''} ${projectToneClass(project.tone)}">
             <input type="hidden" name="projects" value="${project.key}" />
             <div class="task-picker-select">
               <span class="task-picker-mark">${project.mark}</span>
@@ -2655,14 +2632,15 @@ function openTaskPicker(options = {}) {
                 max="${GOAL_INPUT_MAX[project.key]}"
                 step="${project.decimals ? '0.1' : '1'}"
                 inputmode="${project.decimals ? 'decimal' : 'numeric'}"
-                value="${project.key === 'weight' && !state.goals.weightTargetSet ? '' : state.goals[project.key]}"
+                value="${initialGoal}"
                 placeholder="${project.goal}"
                 ${project.key === 'weight' ? 'required' : ''}
               />
               <em>${project.unit}</em>
             </label>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
       <p class="task-picker-count">固定 2 项 · 目标可以随时调整</p>
     `,
@@ -2687,6 +2665,19 @@ function openTaskPicker(options = {}) {
       if (firstRun) setTimeout(maybeShowDailyCheckin, 220);
     },
   });
+}
+
+function updateTaskPickerCompletion(input) {
+  if (!input?.matches?.('.task-goal-input')) return;
+  const option = input.closest('.task-picker-option');
+  if (!option) return;
+  const value = Number(input.value);
+  const hasValue = input.value.trim() !== '';
+  const isValid = hasValue
+    && Number.isFinite(value)
+    && value >= Number(input.min)
+    && value <= Number(input.max);
+  option.classList.toggle('is-complete', isValid);
 }
 
 function createTeamDialog() {
@@ -2775,16 +2766,17 @@ function confirmReset() {
         for (const photo of uniquePhotos) {
           await deleteCheckinPhoto(photo);
         }
-        await deleteCloudHealthData(authSession.uid);
-        await signOutCloud();
+        if (cloudAuthenticated) {
+          await deleteCloudHealthData(authSession.uid);
+          await signOutCloud();
+        }
       }
       state = resetDemoState();
       logoutCurrentUser();
       authSession = null;
+      cloudAuthenticated = false;
       authBootStatus = 'ready';
-      phoneLoginChallenge = null;
-      phoneLoginPhone = '';
-      authDraft = { phone: '', realName: '', groupCode: 'personal', consent: false };
+      authDraft = { phone: '', realName: '', groupCode: 'personal_center', consent: false };
       selectedRecordDate = toDateKey();
       selectedActivityKey = 'badminton';
       challengeDays = 7;
@@ -2801,12 +2793,11 @@ function confirmLogout() {
     description: '退出后健康记录仍会保留，下次使用同一手机号验证登录后可继续查看。',
     submitLabel: '退出登录',
     async onSubmit() {
-      await signOutCloud();
+      if (cloudAuthenticated) await signOutCloud();
       logoutCurrentUser();
       authSession = null;
+      cloudAuthenticated = false;
       authBootStatus = 'ready';
-      phoneLoginChallenge = null;
-      phoneLoginPhone = '';
       cloudSyncStatus = 'idle';
       renderPage();
     },
@@ -2871,14 +2862,16 @@ async function captureCheckinPhoto(projectKey) {
     showToast(error.message || '照片处理失败', 'error');
     return;
   }
-  let cloudRef;
-  try {
-    cloudRef = await uploadCheckinPhoto(dataUrl, authSession.uid, projectKey, toDateKey());
-  } catch (error) {
-    showToast(error.message || '照片上传失败，请检查存储配置', 'error');
-    return;
+  let cloudRef = null;
+  if (cloudAuthenticated) {
+    try {
+      cloudRef = await uploadCheckinPhoto(dataUrl, authSession.uid, projectKey, toDateKey());
+    } catch (error) {
+      showToast(error.message || '照片上传失败，请检查存储配置', 'error');
+      return;
+    }
   }
-  pendingPhoto = { projectKey, dataUrl: cloudRef.dataUrl || dataUrl, cloudRef };
+  pendingPhoto = { projectKey, dataUrl: cloudRef?.dataUrl || dataUrl, cloudRef };
   const amountField = projectKey === 'water'
     ? `
       <label class="modal-field">
@@ -2961,7 +2954,6 @@ document.addEventListener('click', async (event) => {
   const action = actionTarget.dataset.action;
 
   if (action === 'close-modal') closeModal();
-  if (action === 'send-login-code') requestPhoneLoginCode();
   if (action === 'quick-water') {
     const result = updateHealthRecord(state, 'water', Number(actionTarget.dataset.amount), { increment: true });
     applyResult(result, `已记录 ${actionTarget.dataset.amount}ml`, { animateProject: 'water' });
@@ -3099,13 +3091,13 @@ document.addEventListener('input', (event) => {
     if (event.target.name === 'groupCode') {
       authDraft.groupCode = event.target.value;
     }
-    if (event.target.name === 'code') {
-      event.target.value = event.target.value.replace(/\D/g, '').slice(0, 6);
-    }
     updateLoginValidation();
   }
   if (['challenge-daily-goal', 'customName', 'customUnit'].includes(event.target.name) || event.target.id === 'challenge-daily-goal') {
     updateActivityBuilderPreview();
+  }
+  if (event.target.matches('.task-goal-input')) {
+    updateTaskPickerCompletion(event.target);
   }
 });
 
@@ -3204,25 +3196,22 @@ document.addEventListener('submit', async (event) => {
       showToast('请先同意健康数据使用说明', 'error');
       return;
     }
-    const code = String(data.get('code') || '').replace(/\D/g, '');
-    if (!/^\d{6}$/.test(code)) {
-      showToast('请输入 6 位短信验证码', 'error');
-      return;
-    }
     const submit = form.querySelector('[data-login-submit]');
     if (submit) {
       submit.disabled = true;
-      submit.textContent = '正在验证…';
+      submit.textContent = '正在进入…';
     }
-    try {
-      await completePhoneLogin(code);
-      showToast(`欢迎，${authSession?.realName || '你'}`);
-    } catch (error) {
+    const result = completeDirectLogin({
+      phone: String(data.get('phone') || '').replace(/\D/g, ''),
+      realName: String(data.get('realName') || '').trim(),
+      groupCode: String(data.get('groupCode') || 'personal_center'),
+    });
+    if (!result.ok) {
       if (submit) {
         submit.disabled = false;
-        submit.textContent = '验证并进入健康空间';
+        submit.textContent = '进入健康空间';
       }
-      showToast(error.message || '登录失败，请重新获取验证码', 'error');
+      showToast(result.message || '登录失败，请检查信息', 'error');
     }
   }
 
@@ -3248,8 +3237,9 @@ window.addEventListener('health-state-saved', (event) => {
   if (authSession?.uid) scheduleCloudSync(event.detail || state);
 });
 onCloudAuthStateChange?.((event) => {
-  if (event === 'SIGNED_OUT' && authSession) {
+  if (event === 'SIGNED_OUT' && authSession && !authSession.localOnly) {
     authSession = null;
+    cloudAuthenticated = false;
     cloudSyncStatus = 'idle';
     renderPage();
   }

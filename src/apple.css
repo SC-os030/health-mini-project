@@ -1112,6 +1112,23 @@ select {
   color: #fff;
 }
 
+.task-picker-check-ui {
+  transition:
+    border-color var(--duration-fast) ease,
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) ease;
+}
+
+.task-picker-option.is-complete .task-picker-check-ui {
+  border-color: #20bf78;
+  background: linear-gradient(135deg, #16ad70, #35d58e);
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(32, 191, 120, 0.22);
+  transform: scale(1.04);
+}
+
 .task-picker-option:has(.task-picker-check:checked) {
   border-color: rgba(0, 113, 227, 0.28);
   background: #f2f8ff;
